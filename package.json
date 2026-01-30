@@ -1,6 +1,5 @@
 {
   "name": "Portfolio-Website",
-  "homepage": "https://sameralsudani.github.io/osama-app/",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -11,22 +10,28 @@
     "preview": "vite preview",
     "perdeploy": "npm run build",
     "deploy": "gh-pages -d dist"
-
   },
   "dependencies": {
     "@emailjs/browser": "^3.11.0",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^7.3.7",
+    "@mui/material": "^7.3.7",
     "@react-three/drei": "^9.88.2",
     "@react-three/fiber": "^8.14.5",
+    "file-saver": "^2.0.5",
     "framer-motion": "^10.12.16",
     "gh-pages": "^6.3.0",
     "maath": "^0.10.4",
     "react": "^18.2.0",
+    "react-bootstrap": "^2.10.10",
     "react-dom": "^18.2.0",
     "react-icons": "^4.10.1",
     "react-router-dom": "^6.13.0",
     "react-tilt": "^1.0.2",
     "react-vertical-timeline-component": "^3.6.0",
-    "typewriter-effect": "^2.20.1"
+    "typewriter-effect": "^2.20.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/react": "^18.0.37",
