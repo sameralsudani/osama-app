@@ -1,6 +1,3 @@
-/* eslint-disable array-callback-return */
-/* eslint-disable no-loop-func */
-/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useState } from 'react';
 import { Row, Col, ListGroup, Card, Button, Table } from 'react-bootstrap';
 import Radio from '@mui/material/Radio';
@@ -12,6 +9,7 @@ import {
   getFormUploadedDocumentsObjectFromExcelForPin15,
   getFormUploadedDocumentsObjectFromExcelForPin14,
 } from './utils';
+import './App.css';
 
 import { saveAs } from 'file-saver';
 import { getDateTime } from './utils';
@@ -21,6 +19,7 @@ export default function App() {
     useState(null);
 
   const [files, setFiles] = useState([]);
+  const [disabledButtons, setDisabledButtons] = useState({});
 
   const onFileChange = (e) => setFiles(e.target.files);
 
@@ -261,9 +260,12 @@ export default function App() {
   const onDeleteFileHandler = () => {
     setFormUploadedDocumentsObject(null);
     setFiles(null);
+    setDisabledButtons({});
   };
 
-  function exportFile(cardsArray, category, quantity, expirationDate) {
+  function exportFile(cardsArray, category, quantity, expirationDate, index) {
+    setDisabledButtons(prev => ({ ...prev, [index]: true }));
+    
     const exportedWithdrawnCards = cardsArray?.map((card) => {
       return `${card.sn},${card.pin},${expirationDate}\n`;
     });
@@ -277,109 +279,118 @@ export default function App() {
   }
 
   return (
-    <main style={{ padding: '200px' }}>
-      <h3 style={{ color: 'white' }}>Upload Excel File</h3>
+    <main className="app-container">
+      <div className="app-wrapper">
+        <div className="app-header">
+          <h1 className="app-title">Excel File Processor</h1>
+          <p className="app-subtitle">Upload and manage your PIN files with ease</p>
+        </div>
 
-      <Row>
-        <Col md={8} lg={8} xl={6}>
-          <Card>
-            <ListGroup variant='flush'>
-              <ListGroup.Item>
-                <FormControl>
-                  <RadioGroup
-                    aria-labelledby='demo-controlled-radio-buttons-group'
-                    name='controlled-radio-buttons-group'
-                    value={value}
-                    onChange={handleChange}
-                  >
-                    <Row
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'flex-start',
-                      }}
-                    >
-                      <Col>
-                        <FormControlLabel
-                          value='pin15'
-                          control={<Radio />}
-                          label='Pin 15'
-                        />
-                      </Col>
-                      <Col>
-                        <FormControlLabel
-                          value='pin114'
-                          control={<Radio />}
-                          label='Pin 14'
-                        />
-                      </Col>
-                    </Row>
-                  </RadioGroup>
-                </FormControl>
+        <Row className="justify-content-center">
+          <Col md={12} lg={10} xl={9}>
+            <Card className="upload-card">
+              <ListGroup variant='flush'>
+                <ListGroup.Item>
+                  <div className="radio-section">
+                    <FormControl fullWidth>
+                      <RadioGroup
+                        aria-labelledby='demo-controlled-radio-buttons-group'
+                        name='controlled-radio-buttons-group'
+                        value={value}
+                        onChange={handleChange}
+                      >
+                        <Row
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Col xs={6} sm={4} md={3}>
+                            <FormControlLabel
+                              value='pin15'
+                              control={<Radio />}
+                              label='Pin 15'
+                            />
+                          </Col>
+                          <Col xs={6} sm={4} md={3}>
+                            <FormControlLabel
+                              value='pin114'
+                              control={<Radio />}
+                              label='Pin 14'
+                            />
+                          </Col>
+                        </Row>
+                      </RadioGroup>
+                    </FormControl>
+                  </div>
 
-                <div style={{ marginTop: '30px', marginBottom: '10px' }}>
-                  Please select files to upload
-                </div>
+                  <div className="file-upload-label">
+                    📁 Please select files to upload
+                  </div>
 
-                <Row style={{ marginBottom: '20px' }}>
-                  <Col sm={12} md={6} lg={8} xl={8}>
-                    <FileUploader
-                      onSelectFile={onFileChange}
-                      onDeleteFile={onDeleteFileHandler}
-                      files={files}
-                      accept='.xls,.csv,.xlsx'
-                    />
-                  </Col>
-                </Row>
+                  <Row style={{ marginBottom: '20px' }}>
+                    <Col sm={12} md={8} lg={6}>
+                      <FileUploader
+                        onSelectFile={onFileChange}
+                        onDeleteFile={onDeleteFileHandler}
+                        files={files}
+                        accept='.xls,.csv,.xlsx'
+                      />
+                    </Col>
+                  </Row>
 
-                {formUploadedDocumentsObject && (
-                  <Table bordered hover responsive className='table-sm'>
-                    <thead>
-                      <tr>
-                        <th>Doc</th>
-                        <th>Category</th>
-                        <th>Batch</th>
-                        <th>Quantity</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {formUploadedDocumentsObject &&
-                        finalFormUploadedDocumentsArrayOfArrays?.map(
-                          (array, index) => (
-                            <tr key={index}>
-                              <td> {index + 1} </td>
-                              <td> {array[0]?.category} </td>
-                              <td> {array[0]?.batch} </td>
-                              <td> {array?.length - 1} </td>
-                              <td>
-                                {' '}
-                                <Button
-                                  type='submit'
-                                  variant='primary'
-                                  style={{ marginLeft: '30%', width: '100px' }}
-                                  onClick={() =>
-                                    exportFile(
-                                      array.slice(1),
-                                      array?.length - 1,
-                                      array[0]?.category,
-                                      array[0]?.expirationDate
-                                    )
-                                  }
-                                >
-                                  Export File
-                                </Button>
-                              </td>
-                            </tr>
-                          )
-                        )}
-                    </tbody>
-                  </Table>
-                )}
-              </ListGroup.Item>
-            </ListGroup>
-          </Card>
-        </Col>
-      </Row>
+                  {formUploadedDocumentsObject && (
+                    <Table bordered hover responsive className='table-sm data-table'>
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>Category</th>
+                          <th>Batch</th>
+                          <th>Quantity</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {formUploadedDocumentsObject &&
+                          finalFormUploadedDocumentsArrayOfArrays?.map(
+                            (array, index) => (
+                              <tr key={index}>
+                                <td>{index + 1}</td>
+                                <td><strong>{array[0]?.category}</strong></td>
+                                <td>{array[0]?.batch}</td>
+                                <td><strong>{array?.length - 1}</strong></td>
+                                <td>
+                                  <Button
+                                    type='submit'
+                                    variant='primary'
+                                    className="export-btn"
+                                    disabled={disabledButtons[index]}
+                                    onClick={() =>
+                                      exportFile(
+                                        array.slice(1),
+                                        array?.length - 1,
+                                        array[0]?.category,
+                                        array[0]?.expirationDate,
+                                        index
+                                      )
+                                    }
+                                  >
+                                    {disabledButtons[index] ? '✓ Exported' : '📥 Export'}
+                                  </Button>
+                                </td>
+                              </tr>
+                            )
+                          )}
+                      </tbody>
+                    </Table>
+                  )}
+                </ListGroup.Item>
+              </ListGroup>
+            </Card>
+          </Col>
+        </Row>
+      </div>
     </main>
   );
 }
