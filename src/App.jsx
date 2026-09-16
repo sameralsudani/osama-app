@@ -41,7 +41,7 @@ export default function App() {
         setFormUploadedDocumentsObject
       );
     }
-  }, [files?.length]);
+  }, [files?.length, value]);
 
   const formUploadedDocumentsArrayOfArrays =
     formUploadedDocumentsObject &&
@@ -75,6 +75,11 @@ export default function App() {
   let E5KArray = [];
   let E25KArray = [];
   let E15KArray = [];
+  let E30KArray = [];
+  let EB12Array = [];
+  let EV3Array = [];
+  let EV70Array = [];
+  let EV200Array = [];
 
   // We need to sort by category to create finalFormUploadedDocumentsArrayOfArrays
   uniqueFormUploadedDocumentsFlattenedArray?.forEach((row) => {
@@ -92,6 +97,16 @@ export default function App() {
       E50KArray.push(row);
     } else if (row.category === 'EV15') {
       E15KArray.push(row);
+    } else if (row.category === 'EV30') {
+      E30KArray.push(row);
+    } else if (row.category === 'EB12') {
+      EB12Array.push(row);
+    } else if (row.category === 'EV3') {
+      EV3Array.push(row);
+    } else if (row.category === 'EV70') {
+      EV70Array.push(row);
+    } else if (row.category === 'EV200') {
+      EV200Array.push(row);
     }
   });
 
@@ -136,6 +151,12 @@ export default function App() {
     category: E25KArray[0]?.category,
     batch: Math.floor(Math.random() * 1000000000),
     expirationDate: E25KArray[0]?.expirationDate,
+  });
+  let E30KArray2 = [...E30KArray];
+  E30KArray2.unshift({
+    category: E30KArray[0]?.category,
+    batch: Math.floor(Math.random() * 1000000000),
+    expirationDate: E30KArray[0]?.expirationDate,
   });
 
   E100KArray2 = E100KArray2.map((item, index) => {
@@ -242,6 +263,82 @@ export default function App() {
       };
     }
   });
+  E30KArray2 = E30KArray2.map((item, index) => {
+    if (index === 0) {
+      return {
+        ...item,
+      };
+    }
+    return {
+      sn: item.sn,
+      pin: item.pin,
+      status: item.status,
+    };
+  });
+  let EB12Array2 = [...EB12Array];
+  EB12Array2.unshift({
+    category: EB12Array[0]?.category,
+    batch: Math.floor(Math.random() * 1000000000),
+    expirationDate: EB12Array[0]?.expirationDate,
+  });
+  EB12Array2 = EB12Array2.map((item, index) => {
+    if (index === 0) {
+      return { ...item };
+    }
+    return {
+      sn: item.sn,
+      pin: item.pin,
+      status: item.status,
+    };
+  });
+  let EV3Array2 = [...EV3Array];
+  EV3Array2.unshift({
+    category: EV3Array[0]?.category,
+    batch: Math.floor(Math.random() * 1000000000),
+    expirationDate: EV3Array[0]?.expirationDate,
+  });
+  EV3Array2 = EV3Array2.map((item, index) => {
+    if (index === 0) {
+      return { ...item };
+    }
+    return {
+      sn: item.sn,
+      pin: item.pin,
+      status: item.status,
+    };
+  });
+  let EV70Array2 = [...EV70Array];
+  EV70Array2.unshift({
+    category: EV70Array[0]?.category,
+    batch: Math.floor(Math.random() * 1000000000),
+    expirationDate: EV70Array[0]?.expirationDate,
+  });
+  EV70Array2 = EV70Array2.map((item, index) => {
+    if (index === 0) {
+      return { ...item };
+    }
+    return {
+      sn: item.sn,
+      pin: item.pin,
+      status: item.status,
+    };
+  });
+  let EV200Array2 = [...EV200Array];
+  EV200Array2.unshift({
+    category: EV200Array[0]?.category,
+    batch: Math.floor(Math.random() * 1000000000),
+    expirationDate: EV200Array[0]?.expirationDate,
+  });
+  EV200Array2 = EV200Array2.map((item, index) => {
+    if (index === 0) {
+      return { ...item };
+    }
+    return {
+      sn: item.sn,
+      pin: item.pin,
+      status: item.status,
+    };
+  });
   const formUploadedDocumentsArrayOfArraysByExcelCategory = [
     E100KArray2,
     E40KArray2,
@@ -250,6 +347,11 @@ export default function App() {
     E15KArray2,
     E5KArray2,
     E25KArray2,
+    E30KArray2,
+    EB12Array2,
+    EV3Array2,
+    EV70Array2,
+    EV200Array2,
   ];
 
   const finalFormUploadedDocumentsArrayOfArrays =

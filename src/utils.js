@@ -227,6 +227,92 @@ export const getCategoryTag = (category) => {
   }
 };
 
+const parseSerialVoucherRows = (rows, pinLength) => {
+  const categoryMap = {
+    E100K: 'EV1H',
+    E10K: 'EV10',
+    E5K: 'EV5',
+    E25K: 'EV25',
+    E40K: 'EV40',
+    E50K: 'EV50',
+    E15K: 'EV15',
+  };
+
+  return rows
+    .map((row) => String(row).replace(/\\n/g, ' '))
+    .map((row) => {
+      const serial = row.match(/Serial:\s*([0-9]{11})/i)?.[1];
+      const pin = row.match(
+        new RegExp(`Pin:\\s*([0-9]{${pinLength}})`, 'i')
+      )?.[1];
+      const expirationDate = row.match(
+        /Expiry Date:\s*([0-9]{4}-[0-9]{2}-[0-9]{2})/i
+      )?.[1];
+      const categoryCode = row.match(/\b(E100K|E10K|E5K|E25K|E40K|E50K|E15K)\b/i)?.[1];
+
+      if (!serial || !pin || !expirationDate || !categoryCode) {
+        return null;
+      }
+
+      return `${serial},${pin},${expirationDate},${categoryMap[categoryCode.toUpperCase()]}`;
+    })
+    .filter(Boolean);
+};
+
+const parseStructuredVoucherRows = (rows, pinLength) => {
+  const normalizeHeader = (header) =>
+    String(header).replace(/[\s_-]/g, '').toLowerCase();
+  const headers = rows[0]?.map(normalizeHeader) || [];
+  const findIndex = (names) =>
+    names.map((name) => headers.indexOf(name)).find((index) => index >= 0);
+  const serialIndex = findIndex(['serialnumber', 'serial', 'sn']);
+  const pinIndex = findIndex(['pin', 'pinnumber']);
+  const expiryIndex = findIndex(['expirydate', 'expirationdate', 'expiry']);
+  const productIndex = findIndex(['productsku', 'product', 'category', 'productcode']);
+
+  const hasHeaders = [serialIndex, pinIndex, expiryIndex, productIndex].every(
+    (index) => index !== undefined
+  );
+
+  const parseRow = (row) => {
+    let serial;
+    let pin;
+    let expirationDate;
+    let productSku;
+
+    if (hasHeaders) {
+      serial = String(row[serialIndex] || '').trim();
+      pin = String(row[pinIndex] || '').trim();
+      expirationDate = String(row[expiryIndex] || '').trim().slice(0, 10);
+      productSku = String(row[productIndex] || '').trim().toUpperCase();
+    } else {
+      const values = row.map((value) => String(value || '').trim());
+      serial = values.find((value) => /^\d{11}$/.test(value));
+      pin = values.find((value) => /^\d{13,15}$/.test(value) && value !== serial);
+      expirationDate = values.find((value) => /^\d{4}-\d{2}-\d{2}/.test(value))?.slice(0, 10);
+      productSku = values.find((value) => /^(EV|EB)\d+K?$/.test(value.toUpperCase()))?.toUpperCase();
+    }
+
+    if (/^\d+$/.test(pin) && pin.length === pinLength - 1) {
+      pin = pin.padStart(pinLength, '0');
+    }
+
+    const category = productSku?.replace(/K$/, '');
+    if (
+      serial?.length === 11 &&
+      pin?.length === pinLength &&
+      expirationDate &&
+      /^(EV|EB)\d+$/.test(category || '')
+    ) {
+      return `${serial},${pin},${expirationDate},${category}`;
+    }
+
+    return null;
+  };
+
+  return rows.slice(hasHeaders ? 1 : 0).map(parseRow).filter(Boolean);
+};
+
 
 export const agentCategories = [
   {
@@ -858,12 +944,30 @@ export const getFormUploadedDocumentsObjectFromExcelForPin15 = (
       const sheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[sheetName];
       data = XLSX.utils.sheet_to_json(sheet);
+      const rawRows = XLSX.utils.sheet_to_json(sheet, {
+        header: 1,
+        raw: false,
+        defval: '',
+      });
+      const structuredVoucherRows = parseStructuredVoucherRows(rawRows, 15);
+      const serialVoucherTextRows = rawRows.map((row) => row.join(' '));
       let documentArray = [];
       let parsedDocumentArray;
 
       //Getting parsedDocumentArray from the uploaded document
       // Type 1 excel file with multiple columns
-      if (data[0].Content) {
+      if (structuredVoucherRows.length > 0) {
+        parsedDocumentArray = structuredVoucherRows;
+      } else if (serialVoucherTextRows.some((row) =>
+        /Serial:\s*[0-9]+.*Pin:\s*[0-9]+.*Expiry Date:/i.test(row)
+      )) {
+        parsedDocumentArray = parseSerialVoucherRows(
+          serialVoucherTextRows.filter((row) =>
+            /Serial:\s*[0-9]+.*Pin:\s*[0-9]+.*Expiry Date:/i.test(row)
+          ),
+          15
+        );
+      } else if (data[0]?.Content) {
         for (let index = 0; index < data?.length; index++) {
           if (typeof data[index]?.Content === 'string') {
             const row = data[index]?.Content?.trim();
@@ -1067,12 +1171,32 @@ export const getFormUploadedDocumentsObjectFromExcelForPin14 = (
       const sheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[sheetName];
       data = XLSX.utils.sheet_to_json(sheet);
+      const rawRows = XLSX.utils
+        .sheet_to_json(sheet, { header: 1, raw: false, defval: '' })
+        .map((row) => row.join(' '));
+      const structuredRows = XLSX.utils.sheet_to_json(sheet, {
+        header: 1,
+        raw: false,
+        defval: '',
+      });
+      const structuredVoucherRows = parseStructuredVoucherRows(structuredRows, 14);
       let documentArray = [];
       let parsedDocumentArray;
 
       //Getting parsedDocumentArray from the uploaded document
       // Type 1 excel file with multiple columns
-      if (data[0].Content) {
+      if (structuredVoucherRows.length > 0) {
+        parsedDocumentArray = structuredVoucherRows;
+      } else if (rawRows.some((row) =>
+        /Serial:\s*[0-9]+.*Pin:\s*[0-9]+.*Expiry Date:/i.test(row)
+      )) {
+        parsedDocumentArray = parseSerialVoucherRows(
+          rawRows.filter((row) =>
+            /Serial:\s*[0-9]+.*Pin:\s*[0-9]+.*Expiry Date:/i.test(row)
+          ),
+          14
+        );
+      } else if (data[0]?.Content) {
         for (let index = 0; index < data?.length; index++) {
           if (typeof data[index]?.Content === 'string') {
             const row = data[index]?.Content?.trim();
