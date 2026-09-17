@@ -80,6 +80,7 @@ export default function App() {
   let EV3Array = [];
   let EV70Array = [];
   let EV200Array = [];
+  let EV6Array = [];
 
   // We need to sort by category to create finalFormUploadedDocumentsArrayOfArrays
   uniqueFormUploadedDocumentsFlattenedArray?.forEach((row) => {
@@ -107,6 +108,8 @@ export default function App() {
       EV70Array.push(row);
     } else if (row.category === 'EV200') {
       EV200Array.push(row);
+    } else if (row.category === 'EV6') {
+      EV6Array.push(row);
     }
   });
 
@@ -329,7 +332,23 @@ export default function App() {
     batch: Math.floor(Math.random() * 1000000000),
     expirationDate: EV200Array[0]?.expirationDate,
   });
+  let EV6Array2 = [...EV6Array];
+  EV6Array2.unshift({
+    category: EV6Array[0]?.category,
+    batch: Math.floor(Math.random() * 1000000000),
+    expirationDate: EV6Array[0]?.expirationDate,
+  });
   EV200Array2 = EV200Array2.map((item, index) => {
+    if (index === 0) {
+      return { ...item };
+    }
+    return {
+      sn: item.sn,
+      pin: item.pin,
+      status: item.status,
+    };
+  });
+  EV6Array2 = EV6Array2.map((item, index) => {
     if (index === 0) {
       return { ...item };
     }
@@ -352,6 +371,7 @@ export default function App() {
     EV3Array2,
     EV70Array2,
     EV200Array2,
+    EV6Array2,
   ];
 
   const finalFormUploadedDocumentsArrayOfArrays =
