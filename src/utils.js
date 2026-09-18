@@ -228,6 +228,32 @@ export const getCategoryTag = (category) => {
 };
 
 const parseSerialVoucherRows = (rows, pinLength) => {
+  const resolveCategoryFromText = (value) => {
+    const normalized = String(value || '').toUpperCase();
+
+    if (normalized.includes('E100K') || normalized.includes('100000') || normalized.includes('K100')) return 'EV1H';
+    if (normalized.includes('E50K') || normalized.includes('50000') || normalized.includes('K50')) return 'EV50';
+    if (normalized.includes('E40K') || normalized.includes('40000') || normalized.includes('K40')) return 'EV40';
+    if (normalized.includes('E25K') || normalized.includes('25000') || normalized.includes('K25')) return 'EV25';
+    if (normalized.includes('E15K') || normalized.includes('15000') || normalized.includes('K15')) return 'EV15';
+    if (normalized.includes('E10K') || normalized.includes('10000') || normalized.includes('K10')) return 'EV10';
+    if (normalized.includes('E5K') || normalized.includes('5000') || normalized.includes('K5')) return 'EV5';
+
+    const amountMatch = normalized.match(/(\d{1,6})(?:\.\d+)?\s*(?:IQD|KD)?/);
+    if (!amountMatch) return null;
+
+    const amount = Number(amountMatch[1]);
+    if (amount >= 95000) return 'EV1H';
+    if (amount >= 45000) return 'EV50';
+    if (amount >= 35000) return 'EV40';
+    if (amount >= 22000) return 'EV25';
+    if (amount >= 12000) return 'EV15';
+    if (amount >= 9000) return 'EV10';
+    if (amount >= 4500) return 'EV5';
+
+    return null;
+  };
+
   const categoryMap = {
     E100K: 'EV1H',
     E10K: 'EV10',
@@ -248,18 +274,48 @@ const parseSerialVoucherRows = (rows, pinLength) => {
       const expirationDate = row.match(
         /Expiry Date:\s*([0-9]{4}-[0-9]{2}-[0-9]{2})/i
       )?.[1];
-      const categoryCode = row.match(/\b(E100K|E10K|E5K|E25K|E40K|E50K|E15K)\b/i)?.[1];
+      const categoryCode =
+        row.match(/\b(E100K|E10K|E5K|E25K|E40K|E50K|E15K)\b/i)?.[1] ||
+        resolveCategoryFromText(row);
 
       if (!serial || !pin || !expirationDate || !categoryCode) {
         return null;
       }
 
-      return `${serial},${pin},${expirationDate},${categoryMap[categoryCode.toUpperCase()]}`;
+      const category = categoryMap[categoryCode.toUpperCase()] || categoryCode;
+
+      return `${serial},${pin},${expirationDate},${category}`;
     })
     .filter(Boolean);
 };
 
 const parseStructuredVoucherRows = (rows, pinLength) => {
+  const resolveCategoryFromText = (value) => {
+    const normalized = String(value || '').toUpperCase();
+
+    if (normalized.includes('E100K') || normalized.includes('100000') || normalized.includes('K100')) return 'EV1H';
+    if (normalized.includes('E50K') || normalized.includes('50000') || normalized.includes('K50')) return 'EV50';
+    if (normalized.includes('E40K') || normalized.includes('40000') || normalized.includes('K40')) return 'EV40';
+    if (normalized.includes('E25K') || normalized.includes('25000') || normalized.includes('K25')) return 'EV25';
+    if (normalized.includes('E15K') || normalized.includes('15000') || normalized.includes('K15')) return 'EV15';
+    if (normalized.includes('E10K') || normalized.includes('10000') || normalized.includes('K10')) return 'EV10';
+    if (normalized.includes('E5K') || normalized.includes('5000') || normalized.includes('K5')) return 'EV5';
+
+    const amountMatch = normalized.match(/(\d{1,6})(?:\.\d+)?\s*(?:IQD|KD)?/);
+    if (!amountMatch) return null;
+
+    const amount = Number(amountMatch[1]);
+    if (amount >= 95000) return 'EV1H';
+    if (amount >= 45000) return 'EV50';
+    if (amount >= 35000) return 'EV40';
+    if (amount >= 22000) return 'EV25';
+    if (amount >= 12000) return 'EV15';
+    if (amount >= 9000) return 'EV10';
+    if (amount >= 4500) return 'EV5';
+
+    return null;
+  };
+
   const normalizeHeader = (header) =>
     String(header).replace(/[\s_-]/g, '').toLowerCase();
   const headers = rows[0]?.map(normalizeHeader) || [];
@@ -290,19 +346,28 @@ const parseStructuredVoucherRows = (rows, pinLength) => {
       serial = values.find((value) => /^\d{11}$/.test(value));
       pin = values.find((value) => /^\d{13,15}$/.test(value) && value !== serial);
       expirationDate = values.find((value) => /^\d{4}-\d{2}-\d{2}/.test(value))?.slice(0, 10);
-      productSku = values.find((value) => /^(EV|EB)\d+K?$/.test(value.toUpperCase()))?.toUpperCase();
+      productSku =
+        values.find((value) => /^(EV|EB)\d+K?$/.test(value.toUpperCase()))?.toUpperCase() ||
+        values.find((value) => /(?:E\d+K|\d+K|\d+\s*IQD|\d+\.\d+\s*IQD)/i.test(value)) ||
+        null;
     }
+
+    const normalizedProductSku = productSku?.replace(/K$/, '');
+    const category =
+      resolveCategoryFromText(productSku || row.join(' ')) ||
+      (/^[A-Z]{2,3}\d+[A-Z]?$/.test(normalizedProductSku || '')
+        ? normalizedProductSku
+        : null);
 
     if (/^\d+$/.test(pin) && pin.length === pinLength - 1) {
       pin = pin.padStart(pinLength, '0');
     }
 
-    const category = productSku?.replace(/K$/, '');
     if (
       serial?.length === 11 &&
       pin?.length === pinLength &&
       expirationDate &&
-      /^(EV|EB)\d+$/.test(category || '')
+      category
     ) {
       return `${serial},${pin},${expirationDate},${category}`;
     }
@@ -1375,6 +1440,87 @@ export const getFormUploadedDocumentsObjectFromExcelForPin14 = (
       console.log('file error', reader.error);
     };
   }
+};
+
+const parseUploadedSheet = (sheet) => {
+  const rows = XLSX.utils.sheet_to_json(sheet, {
+    header: 1,
+    raw: false,
+    defval: '',
+  });
+  const textRows = rows.map((row) => row.join(' '));
+
+  for (const pinLength of [14, 15]) {
+    const structuredRows = parseStructuredVoucherRows(rows, pinLength);
+    if (structuredRows.length > 0) {
+      return { rows: structuredRows, pinLength };
+    }
+
+    const serialRows = textRows.filter((row) =>
+      /(?:Serial|SerialNumber)\s*:?\s*[0-9]{11}.*(?:Pin|PIN)\s*:?\s*[0-9]{14,15}.*(?:Expiry Date|ExpiryDate)\s*:/i.test(row)
+    );
+    const parsedSerialRows = parseSerialVoucherRows(serialRows, pinLength);
+    if (parsedSerialRows.length > 0) {
+      return { rows: parsedSerialRows, pinLength };
+    }
+  }
+
+  return { rows: [], pinLength: null };
+};
+
+export const getFormUploadedDocumentsObjectFromExcel = (
+  files,
+  setFormUploadedDocumentsObject
+) => {
+  let uploadedDocumentObject = {};
+
+  Array.from(files || []).forEach((file) => {
+    const reader = new FileReader();
+
+    reader.onload = (event) => {
+      try {
+        const workbook = XLSX.read(event.target.result, { type: 'array' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const { rows, pinLength } = parseUploadedSheet(sheet);
+
+        if (!pinLength || rows.length === 0) {
+          console.warn(`No supported PIN rows found in ${file.name}`);
+          return;
+        }
+
+        const batch = Math.floor(Math.random() * 1000000000);
+        const documents = rows
+          .map((entry) => {
+            const [sn, pin, expirationDate, category] = entry.split(',');
+            return {
+              sn,
+              pin,
+              expirationDate,
+              category,
+              status: 'available',
+              batch,
+            };
+          })
+          .filter(
+            (item) =>
+              item.sn?.length === 11 && item.pin?.length === pinLength
+          );
+
+        uploadedDocumentObject = {
+          ...uploadedDocumentObject,
+          [batch]: documents,
+        };
+        setFormUploadedDocumentsObject(uploadedDocumentObject);
+      } catch (error) {
+        console.error(`Unable to read ${file.name}`, error);
+      }
+    };
+
+    reader.onerror = () => {
+      console.error(`Unable to read ${file.name}`, reader.error);
+    };
+    reader.readAsArrayBuffer(file);
+  });
 };
 
 export const inspectDuplicates = (...arrays) => {

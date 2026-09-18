@@ -51,7 +51,7 @@ function FileUploader(props) {
             multiple
           />
           <div className="file-name">
-            {files?.length>0 ? <div>{names.join(' , ')}</div> : <div>Choose file</div>}
+            {files?.length>0 ? <div>{names.join(' , ')}</div> : <div>اختر ملفًا</div>}
           </div>
         </Button>
       </div>

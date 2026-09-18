@@ -1,13 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Row, Col, ListGroup, Card, Button, Table } from 'react-bootstrap';
-import Radio from '@mui/material/Radio';
-import RadioGroup from '@mui/material/RadioGroup';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import FormControl from '@mui/material/FormControl';
 import FileUploader from './FileUploader/FileUploader.jsx';
 import {
-  getFormUploadedDocumentsObjectFromExcelForPin15,
-  getFormUploadedDocumentsObjectFromExcelForPin14,
+  getFormUploadedDocumentsObjectFromExcel,
 } from './utils';
 import './App.css';
 
@@ -23,25 +18,12 @@ export default function App() {
 
   const onFileChange = (e) => setFiles(e.target.files);
 
-  const [value, setValue] = React.useState('pin15');
-
-  const handleChange = (event) => {
-    setValue(event.target.value);
-  };
-
   useEffect(() => {
-    if (value === 'pin15') {
-      getFormUploadedDocumentsObjectFromExcelForPin15(
-        files,
-        setFormUploadedDocumentsObject
-      );
-    } else {
-      getFormUploadedDocumentsObjectFromExcelForPin14(
-        files,
-        setFormUploadedDocumentsObject
-      );
-    }
-  }, [files?.length, value]);
+    getFormUploadedDocumentsObjectFromExcel(
+      files,
+      setFormUploadedDocumentsObject
+    );
+  }, [files?.length]);
 
   const formUploadedDocumentsArrayOfArrays =
     formUploadedDocumentsObject &&
@@ -81,6 +63,8 @@ export default function App() {
   let EV70Array = [];
   let EV200Array = [];
   let EV6Array = [];
+  let ED1KArray = [];
+  let ED2KArray = [];
 
   // We need to sort by category to create finalFormUploadedDocumentsArrayOfArrays
   uniqueFormUploadedDocumentsFlattenedArray?.forEach((row) => {
@@ -110,6 +94,10 @@ export default function App() {
       EV200Array.push(row);
     } else if (row.category === 'EV6') {
       EV6Array.push(row);
+    } else if (row.category === 'ED1') {
+      ED1KArray.push(row);
+    } else if (row.category === 'ED2') {
+      ED2KArray.push(row);
     }
   });
 
@@ -358,6 +346,38 @@ export default function App() {
       status: item.status,
     };
   });
+  let ED1KArray2 = [...ED1KArray];
+  ED1KArray2.unshift({
+    category: ED1KArray[0]?.category,
+    batch: Math.floor(Math.random() * 1000000000),
+    expirationDate: ED1KArray[0]?.expirationDate,
+  });
+  ED1KArray2 = ED1KArray2.map((item, index) => {
+    if (index === 0) {
+      return { ...item };
+    }
+    return {
+      sn: item.sn,
+      pin: item.pin,
+      status: item.status,
+    };
+  });
+  let ED2KArray2 = [...ED2KArray];
+  ED2KArray2.unshift({
+    category: ED2KArray[0]?.category,
+    batch: Math.floor(Math.random() * 1000000000),
+    expirationDate: ED2KArray[0]?.expirationDate,
+  });
+  ED2KArray2 = ED2KArray2.map((item, index) => {
+    if (index === 0) {
+      return { ...item };
+    }
+    return {
+      sn: item.sn,
+      pin: item.pin,
+      status: item.status,
+    };
+  });
   const formUploadedDocumentsArrayOfArraysByExcelCategory = [
     E100KArray2,
     E40KArray2,
@@ -372,6 +392,8 @@ export default function App() {
     EV70Array2,
     EV200Array2,
     EV6Array2,
+    ED1KArray2,
+    ED2KArray2,
   ];
 
   const finalFormUploadedDocumentsArrayOfArrays =
@@ -401,11 +423,11 @@ export default function App() {
   }
 
   return (
-    <main className="app-container">
+    <main className="app-container" dir="rtl">
       <div className="app-wrapper">
         <div className="app-header">
-          <h1 className="app-title">Excel File Processor</h1>
-          <p className="app-subtitle">Upload and manage your PIN files with ease</p>
+          <h1 className="app-title">معالج ملفات الإكسل</h1>
+          <p className="app-subtitle">ارفع ملفات PIN وأدرها بسهولة</p>
         </div>
 
         <Row className="justify-content-center">
@@ -413,42 +435,8 @@ export default function App() {
             <Card className="upload-card">
               <ListGroup variant='flush'>
                 <ListGroup.Item>
-                  <div className="radio-section">
-                    <FormControl fullWidth>
-                      <RadioGroup
-                        aria-labelledby='demo-controlled-radio-buttons-group'
-                        name='controlled-radio-buttons-group'
-                        value={value}
-                        onChange={handleChange}
-                      >
-                        <Row
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          <Col xs={6} sm={4} md={3}>
-                            <FormControlLabel
-                              value='pin15'
-                              control={<Radio />}
-                              label='Pin 15'
-                            />
-                          </Col>
-                          <Col xs={6} sm={4} md={3}>
-                            <FormControlLabel
-                              value='pin114'
-                              control={<Radio />}
-                              label='Pin 14'
-                            />
-                          </Col>
-                        </Row>
-                      </RadioGroup>
-                    </FormControl>
-                  </div>
-
                   <div className="file-upload-label">
-                    📁 Please select files to upload
+                    📁 اختر الملفات المراد رفعها
                   </div>
 
                   <Row style={{ marginBottom: '20px' }}>
@@ -467,10 +455,10 @@ export default function App() {
                       <thead>
                         <tr>
                           <th>#</th>
-                          <th>Category</th>
-                          <th>Batch</th>
-                          <th>Quantity</th>
-                          <th>Action</th>
+                          <th>الفئة</th>
+                          <th>الدفعة</th>
+                          <th>الكمية</th>
+                          <th>الإجراء</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -498,7 +486,7 @@ export default function App() {
                                       )
                                     }
                                   >
-                                    {disabledButtons[index] ? '✓ Exported' : '📥 Export'}
+                                    {disabledButtons[index] ? '✓ تم التصدير' : '📥 تصدير'}
                                   </Button>
                                 </td>
                               </tr>
