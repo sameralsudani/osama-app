@@ -269,7 +269,7 @@ const parseSerialVoucherRows = (rows, pinLength) => {
     .map((row) => {
       const serial = row.match(/Serial:\s*([0-9]{11})/i)?.[1];
       const pin = row.match(
-        new RegExp(`Pin:\\s*([0-9]{${pinLength}})`, 'i')
+        new RegExp(`Pin:\\s*([0-9]{${pinLength}})(?![0-9])`, 'i')
       )?.[1];
       const expirationDate = row.match(
         /Expiry Date:\s*([0-9]{4}-[0-9]{2}-[0-9]{2})/i
