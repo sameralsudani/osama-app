@@ -500,6 +500,7 @@ export default function App() {
             </Card>
           </Col>
         </Row>
+        <div className="app-credit">By Eng Samer</div>
       </div>
     </main>
   );

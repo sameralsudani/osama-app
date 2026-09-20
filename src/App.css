@@ -32,6 +32,15 @@
   font-weight: 300;
 }
 
+.app-credit {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.9rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  margin-top: 24px;
+  text-align: center;
+}
+
 /* Card Styling */
 .upload-card {
   border-radius: 20px;

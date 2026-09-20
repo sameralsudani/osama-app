@@ -3,6 +3,7 @@
   border-radius: 3px;
   display: flex;
   justify-content: space-between;
+  max-width: 450px;
 }
 
 .file-div {
@@ -11,7 +12,7 @@
 }
 
 .file-div > button {
-  justify-content: left;
+  justify-content: right;
 }
 
 /* .disabled {
@@ -24,4 +25,10 @@
 
 .attachment-icon {
   width: 100%;
+}
+
+@media (max-width: 768px) {
+  .file-uploader {
+    max-width: 100%;
+  }
 }
