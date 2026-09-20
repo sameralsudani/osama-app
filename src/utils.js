@@ -265,14 +265,14 @@ const parseSerialVoucherRows = (rows, pinLength) => {
   };
 
   return rows
-    .map((row) => String(row).replace(/\\n/g, ' '))
+    .map((row) => String(row).replace(/\\n/g, ' ').replace(/\s+/g, ' ').trim())
     .map((row) => {
-      const serial = row.match(/Serial:\s*([0-9]{11})/i)?.[1];
+      const serial = row.match(/Serial(?:\s*Number)?\s*:\s*([0-9]{11})/i)?.[1];
       const pin = row.match(
-        new RegExp(`Pin:\\s*([0-9]{${pinLength}})(?![0-9])`, 'i')
+        new RegExp(`Pin\\s*:\\s*([0-9]{${pinLength}})(?![0-9])`, 'i')
       )?.[1];
       const expirationDate = row.match(
-        /Expiry Date:\s*([0-9]{4}-[0-9]{2}-[0-9]{2})/i
+        /Expiry\s*Date\s*:\s*([0-9]{4}-[0-9]{2}-[0-9]{2})/i
       )?.[1];
       const categoryCode =
         row.match(/\b(E100K|E10K|E5K|E25K|E40K|E50K|E15K)\b/i)?.[1] ||
@@ -376,6 +376,38 @@ const parseStructuredVoucherRows = (rows, pinLength) => {
   };
 
   return rows.slice(hasHeaders ? 1 : 0).map(parseRow).filter(Boolean);
+};
+
+const parseSmsExportRows = (rows, pinLength) => {
+  const categoryMap = {
+    E100K: 'EV1H',
+    E10K: 'EV10',
+    E5K: 'EV5',
+    E25K: 'EV25',
+    E40K: 'EV40',
+    E50K: 'EV50',
+    E15K: 'EV15',
+  };
+
+  return rows
+    .map((row) => String(row).replace(/\s+/g, ' ').trim())
+    .map((row) => {
+      const voucherMatch = row.match(
+        new RegExp(`SN\\s*[:：]?\\s*([0-9]{${pinLength}})\\D+([0-9]{11})`, 'i')
+      );
+      const expirationDate = row.match(/(20\d{2}-\d{2}-\d{2})/)?.[1];
+      const categoryCode = row.match(
+        /(E100K|E10K|E5K|E25K|E40K|E50K|E15K)/i
+      )?.[1];
+
+      if (!voucherMatch || !categoryCode) {
+        return null;
+      }
+
+      const [, pin, serial] = voucherMatch;
+      return `${serial},${pin},${expirationDate || ''},${categoryMap[categoryCode.toUpperCase()]}`;
+    })
+    .filter(Boolean);
 };
 
 
@@ -1448,7 +1480,11 @@ const parseUploadedSheet = (sheet) => {
     raw: false,
     defval: '',
   });
-  const textRows = rows.map((row) => row.join(' '));
+  const textRows = rows.map((row) =>
+    (Array.isArray(row) ? row : [row])
+      .map((value) => String(value ?? ''))
+      .join(' ')
+  );
 
   for (const pinLength of [14, 15]) {
     const structuredRows = parseStructuredVoucherRows(rows, pinLength);
@@ -1456,10 +1492,12 @@ const parseUploadedSheet = (sheet) => {
       return { rows: structuredRows, pinLength };
     }
 
-    const serialRows = textRows.filter((row) =>
-      /(?:Serial|SerialNumber)\s*:?\s*[0-9]{11}.*(?:Pin|PIN)\s*:?\s*[0-9]{14,15}.*(?:Expiry Date|ExpiryDate)\s*:/i.test(row)
-    );
-    const parsedSerialRows = parseSerialVoucherRows(serialRows, pinLength);
+    const smsExportRows = parseSmsExportRows(textRows, pinLength);
+    if (smsExportRows.length > 0) {
+      return { rows: smsExportRows, pinLength };
+    }
+
+    const parsedSerialRows = parseSerialVoucherRows(textRows, pinLength);
     if (parsedSerialRows.length > 0) {
       return { rows: parsedSerialRows, pinLength };
     }

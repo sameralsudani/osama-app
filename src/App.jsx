@@ -23,7 +23,7 @@ export default function App() {
       files,
       setFormUploadedDocumentsObject
     );
-  }, [files?.length]);
+  }, [files]);
 
   const formUploadedDocumentsArrayOfArrays =
     formUploadedDocumentsObject &&
