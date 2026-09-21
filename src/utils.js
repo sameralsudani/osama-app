@@ -235,7 +235,7 @@ const normalizeVoucherCategory = (value) => {
   const compact = normalized.replace(/\s+/g, '').replace(/_/g, '');
 
   if (compact.includes('E100K') || /(?:^|[^A-Z0-9])100K(?:$|[^A-Z0-9])|(?:^|[^A-Z0-9])EV1H(?:$|[^A-Z0-9])/.test(compact)) {
-    return 'EV1';
+    return 'EV1H';
   }
 
   const categoryCodeMatch = compact.match(
@@ -272,7 +272,7 @@ const normalizeVoucherCategory = (value) => {
   if (!amountMatch) return null;
 
   const amount = Number(amountMatch[1]);
-  if (amount >= 95000) return 'EV1';
+  if (amount >= 95000) return 'EV1H';
   if (amount >= 45000) return 'EV50';
   if (amount >= 35000) return 'EV40';
   if (amount >= 22000) return 'EV25';
@@ -376,7 +376,7 @@ const parseStructuredVoucherRows = (rows, pinLength) => {
 
 const parseSmsExportRows = (rows, pinLength) => {
   const categoryMap = {
-    E100K: 'EV1',
+    E100K: 'EV1H',
     E10K: 'EV10',
     E5K: 'EV5',
     E25K: 'EV25',

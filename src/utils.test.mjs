@@ -12,7 +12,7 @@ const categoryCases = [
   { product: 'EV25K', expected: 'EV25' },
   { product: 'EV40K', expected: 'EV40' },
   { product: 'EV50K', expected: 'EV50' },
-  { product: 'E100K', expected: 'EV1' },
+  { product: 'E100K', expected: 'EV1H' },
 ];
 
 const getSheet = (rows) => {
@@ -93,7 +93,7 @@ test('parses structured rows for additional app categories without a hardcoded w
 
 test('parses single-column content rows for all supported category formats', () => {
   const rows = [
-    ['القسيمة الإلكترونية SN: 8039940073 PIN: 0406574103997 Expiry Date: 2028-06-30 E100K'],
+    ['You have received one E100K voucher with details:- \nAmount: 100000.0 IQD\nSerial:10322702290\nPin: 000084520743243\n Expiry Date: 2028-06-30T00:00:00'],
     ['القسيمة الإلكترونية SN: 8039940047 PIN: 040624581890046 Expiry Date: 2028-06-30 EV5K'],
     ['القسيمة الإلكترونية SN: 8039940075 PIN: 040680886908011 Expiry Date: 2028-06-30 EV15K'],
   ];
@@ -102,7 +102,7 @@ test('parses single-column content rows for all supported category formats', () 
   assert.equal(parsedRows.length, 3, 'expected all 3 single-column rows to be parsed');
   assert.deepEqual(
     parsedRows.map((entry) => entry.split(',')[3]).sort(),
-    ['EV1', 'EV15', 'EV5'],
+    ['EV15', 'EV1H', 'EV5'],
     'expected the single-column content rows to map to the right categories'
   );
 });
