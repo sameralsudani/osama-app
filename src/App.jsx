@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Row, Col, ListGroup, Card, Button, Table } from 'react-bootstrap';
+import { Row, Col, ListGroup, Card, Button, Table, Spinner } from 'react-bootstrap';
 import FileUploader from './FileUploader/FileUploader.jsx';
 import {
   buildExportGroups,
   getFormUploadedDocumentsObjectFromExcel,
   getFormUploadedDocumentsObjectFromTxt,
 } from './utils';
+import * as XLSX from 'xlsx';
 import './App.css';
 
 import { saveAs } from 'file-saver';
@@ -17,6 +18,9 @@ export default function App() {
 
   const [files, setFiles] = useState([]);
   const [txtFiles, setTxtFiles] = useState([]);
+  const [txtConversionFiles, setTxtConversionFiles] = useState([]);
+  const [isConvertingTxt, setIsConvertingTxt] = useState(false);
+  const [txtConversionError, setTxtConversionError] = useState('');
   const [disabledButtons, setDisabledButtons] = useState({});
   const [txtDisabledButtons, setTxtDisabledButtons] = useState({});
   const [txtUploadedDocumentsObject, setTxtUploadedDocumentsObject] =
@@ -24,6 +28,14 @@ export default function App() {
 
   const onFileChange = (e) => setFiles(e.target.files);
   const onTxtFileChange = (e) => setTxtFiles(e.target.files);
+  const onTxtConversionFileChange = (e) => {
+    setTxtConversionFiles(e.target.files);
+    setTxtConversionError('');
+  };
+  const onDeleteTxtConversionFileHandler = () => {
+    setTxtConversionFiles([]);
+    setTxtConversionError('');
+  };
 
   useEffect(() => {
     getFormUploadedDocumentsObjectFromExcel(
@@ -106,6 +118,40 @@ export default function App() {
       type: 'text/plain;charset=utf-8',
     });
     saveAs(blob, `${category}, ${quantity}, ${getDateTime()}.txt`);
+  }
+
+  async function convertTxtToExcel() {
+    const file = txtConversionFiles?.[0];
+    if (!file) return;
+
+    setIsConvertingTxt(true);
+    setTxtConversionError('');
+    try {
+      const workbook = XLSX.read(await file.text(), {
+        type: 'string',
+        raw: true,
+      });
+      const firstSheet = workbook.SheetNames[0];
+      const worksheet = firstSheet && workbook.Sheets[firstSheet];
+      const hasData = worksheet &&
+        XLSX.utils
+          .sheet_to_json(worksheet, { header: 1, blankrows: false })
+          .some((row) => row.some((cell) => String(cell).trim()));
+      if (!hasData) {
+        setTxtConversionError('الملف النصي لا يحتوي على بيانات للتحويل.');
+        return;
+      }
+
+      const outputName = /\.txt$/i.test(file.name)
+        ? file.name.replace(/\.txt$/i, '.xlsx')
+        : `${file.name}.xlsx`;
+      XLSX.writeFile(workbook, outputName);
+    } catch (error) {
+      console.error(`Unable to convert ${file.name} to Excel`, error);
+      setTxtConversionError('تعذر تحويل الملف. تحقق من محتوى ملف TXT وحاول مجددًا.');
+    } finally {
+      setIsConvertingTxt(false);
+    }
   }
 
   return (
@@ -249,6 +295,56 @@ export default function App() {
                         )}
                       </tbody>
                     </Table>
+                  )}
+                </ListGroup.Item>
+              </ListGroup>
+            </Card>
+          </Col>
+        </Row>
+        <Row className="justify-content-center converter-row">
+          <Col md={12} lg={10} xl={9}>
+            <Card className="upload-card">
+              <ListGroup variant='flush'>
+                <ListGroup.Item>
+                  <div className="file-upload-label">
+                    🔄 تحويل ملف TXT إلى Excel
+                  </div>
+                  <Row className="converter-controls">
+                    <Col sm={12}>
+                      <FileUploader
+                        onSelectFile={onTxtConversionFileChange}
+                        onDeleteFile={onDeleteTxtConversionFileHandler}
+                        files={txtConversionFiles}
+                        accept='.txt,text/plain'
+                        multiple={false}
+                      />
+                    </Col>
+                    <Col sm={12}>
+                      <Button
+                        type='button'
+                        variant='primary'
+                        className="export-btn converter-button"
+                        disabled={!txtConversionFiles?.length || isConvertingTxt}
+                        onClick={convertTxtToExcel}
+                      >
+                        {isConvertingTxt ? (
+                          <>
+                            <Spinner animation="border" size="sm" aria-hidden="true" />
+                            <span>جارٍ تحويل الملف...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span aria-hidden="true">📊</span>
+                            <span>تحويل TXT إلى Excel</span>
+                          </>
+                        )}
+                      </Button>
+                    </Col>
+                  </Row>
+                  {txtConversionError && (
+                    <div className="converter-error" role="alert">
+                      {txtConversionError}
+                    </div>
                   )}
                 </ListGroup.Item>
               </ListGroup>

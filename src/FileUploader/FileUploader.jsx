@@ -5,7 +5,14 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import "./FileUploader.css";
 
 function FileUploader(props) {
-  const { accept, onSelectFile, onDeleteFile, disabled, files } = props;
+  const {
+    accept,
+    onSelectFile,
+    onDeleteFile,
+    disabled,
+    files,
+    multiple = true,
+  } = props;
   const hiddenFileInput = useRef(null);
   // const [files, setFiles] = useState([]);
 
@@ -48,7 +55,7 @@ function FileUploader(props) {
             hidden
             disabled={disabled}
             data-testid="file-upload-input"
-            multiple
+            multiple={multiple}
           />
           <div className="file-name">
             {files?.length>0 ? <div>{names.join(' , ')}</div> : <div>اختر ملفًا</div>}
