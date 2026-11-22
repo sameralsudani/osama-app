@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import * as XLSX from 'xlsx';
-import { buildExportGroups, parseUploadedSheet } from './utils.js';
+import {
+  buildExportGroups,
+  parseUploadedSheet,
+  parseUploadedTextFile,
+} from './utils.js';
 
 const categoryCases = [
   { product: 'EV1K', expected: 'EV1' },
@@ -142,4 +146,31 @@ test('groups parsed documents by every returned category for display and export'
     pin: '040780354444770',
     status: 'available',
   });
+});
+
+test('parses header-based TXT rows and infers EV5 from denomination', () => {
+  const text = [
+    'SerialNumber,PIN,Denomination,Currency,ExpiryDate,ProductSKU,State,OwnerId',
+    '80411379303,040991428504970240,5000.00,IQD,2028-10-31,IOD,3,1547',
+  ].join('\n');
+
+  const { rows, pinLength } = parseUploadedTextFile(text, '1300 evd 50k.txt');
+
+  assert.equal(pinLength, 18);
+  assert.deepEqual(rows, ['80411379303,040991428504970240,2028-10-31,EV5']);
+});
+
+test('parses three-column TXT rows and infers EV40 from the filename', () => {
+  const text = [
+    '10323133983,000440966057143,2028-06-30',
+    '10323133984,000440966057144,2028-06-30',
+  ].join('\n');
+
+  const { rows, pinLength } = parseUploadedTextFile(text, '250 EV40.txt');
+
+  assert.equal(pinLength, 15);
+  assert.deepEqual(rows, [
+    '10323133983,000440966057143,2028-06-30,EV40',
+    '10323133984,000440966057144,2028-06-30,EV40',
+  ]);
 });

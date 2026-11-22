@@ -321,6 +321,7 @@ const parseStructuredVoucherRows = (rows, pinLength) => {
   const pinIndex = findIndex(['pin', 'pinnumber']);
   const expiryIndex = findIndex(['expirydate', 'expirationdate', 'expiry']);
   const productIndex = findIndex(['productsku', 'product', 'category', 'productcode']);
+  const denominationIndex = findIndex(['denomination', 'amount', 'value']);
 
   const hasHeaders = [serialIndex, pinIndex, expiryIndex, productIndex].every(
     (index) => index !== undefined
@@ -350,7 +351,12 @@ const parseStructuredVoucherRows = (rows, pinLength) => {
 
     const normalizedProductSku = productSku?.replace(/K$/, '');
     const category =
-      resolveCategoryFromText(productSku || row.join(' ')) ||
+      resolveCategoryFromText(productSku) ||
+      (hasHeaders
+        ? resolveCategoryFromText(
+            denominationIndex >= 0 ? row[denominationIndex] : null
+          )
+        : null) ||
       (/^[A-Z]{2,3}\d+[A-Z]?$/.test(normalizedProductSku || '')
         ? normalizedProductSku
         : null);
@@ -1528,7 +1534,7 @@ export const parseUploadedSheet = (sheet) => {
 
   const candidateEntries = [];
 
-  for (const pinLength of [13, 14, 15]) {
+  for (const pinLength of [13, 14, 15, 16, 17, 18]) {
     candidateEntries.push(
       ...parseStructuredVoucherRows(rows, pinLength).map((entry) => ({
         entry,
@@ -1571,6 +1577,147 @@ export const parseUploadedSheet = (sheet) => {
     rows: merged,
     pinLength: bestMatch?.pinLength ?? null,
   };
+};
+
+export const parseUploadedTextFile = (text, fileName = '') => {
+  const rows = String(text || '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) =>
+      line.includes(',')
+        ? line.split(',').map((value) => value.trim())
+        : [line]
+    );
+
+  const candidateEntries = [];
+
+  for (const pinLength of [13, 14, 15, 16, 17, 18]) {
+    candidateEntries.push(
+      ...parseStructuredVoucherRows(rows, pinLength).map((entry) => ({
+        entry,
+        pinLength,
+      }))
+    );
+
+    const textRows = rows.map((row) => row.join(' '));
+    candidateEntries.push(
+      ...parseSerialVoucherRows(textRows, pinLength).map((entry) => ({
+        entry,
+        pinLength,
+      })),
+      ...parseSmsExportRows(textRows, pinLength).map((entry) => ({
+        entry,
+        pinLength,
+      }))
+    );
+
+    const filenameCategory = normalizeVoucherCategory(fileName);
+    for (const row of rows) {
+      const serial = row.find((value) => /^\d{10,11}$/.test(value));
+      const pin = row.find(
+        (value) =>
+          new RegExp(`^\\d{${pinLength}}$`).test(value) &&
+          value !== serial
+      );
+      const expirationDate =
+        row.find((value) => /^\d{4}-\d{2}-\d{2}/.test(value))?.slice(0, 10) ||
+        '';
+      const category =
+        row
+          .filter((value) => !/^\d{10,18}$/.test(value))
+          .map(normalizeVoucherCategory)
+          .find(Boolean) ||
+        filenameCategory;
+
+      if (serial && pin && category) {
+        candidateEntries.push({
+          entry: `${serial},${pin},${expirationDate},${category}`,
+          pinLength,
+        });
+      }
+    }
+  }
+
+  const deduped = new Map();
+  for (const { entry, pinLength } of candidateEntries) {
+    const [serial, pin, expirationDate, category] = entry.split(',');
+    const key = `${serial}|${pin}|${expirationDate}|${category}`;
+    if (!deduped.has(key) || pinLength > deduped.get(key).pinLength) {
+      deduped.set(key, { entry, pinLength });
+    }
+  }
+
+  const parsed = [...deduped.values()];
+  return {
+    rows: parsed.map(({ entry }) => entry),
+    pinLength:
+      parsed.reduce(
+        (best, current) => (current.pinLength > (best?.pinLength || 0) ? current : best),
+        null
+      )?.pinLength ?? null,
+  };
+};
+
+export const getFormUploadedDocumentsObjectFromTxt = (
+  files,
+  setFormUploadedDocumentsObject
+) => {
+  let uploadedDocumentObject = {};
+
+  Array.from(files || []).forEach((file) => {
+    if (!/\.txt$/i.test(file.name)) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const { rows, pinLength } = parseUploadedTextFile(
+          event.target.result,
+          file.name
+        );
+
+        if (!pinLength || rows.length === 0) {
+          console.warn(`No supported PIN rows found in ${file.name}`);
+          return;
+        }
+
+        const batch = Math.floor(Math.random() * 1000000000);
+        const documents = rows
+          .map((entry) => {
+            const [sn, pin, expirationDate, category] = entry.split(',');
+            return {
+              sn,
+              pin,
+              expirationDate,
+              category,
+              status: 'available',
+              batch,
+            };
+          })
+          .filter(
+            (item) =>
+              /^\d{10,11}$/.test(String(item.sn || '')) &&
+              /^\d{13,18}$/.test(String(item.pin || ''))
+          );
+
+        if (documents.length > 0) {
+          uploadedDocumentObject = {
+            ...uploadedDocumentObject,
+            [batch]: documents,
+          };
+          setFormUploadedDocumentsObject(uploadedDocumentObject);
+        }
+      } catch (error) {
+        console.error(`Unable to read ${file.name}`, error);
+      }
+    };
+    reader.onerror = () => {
+      console.error(`Unable to read ${file.name}`, reader.error);
+    };
+    reader.readAsText(file);
+  });
 };
 
 export const getFormUploadedDocumentsObjectFromExcel = (
